@@ -8,6 +8,7 @@ A simple BeanParty Multiplayer game made with raylib
 ```
 
 ## Preview
+![Preview](https://github.com/user-attachments/assets/59af3dc9-1675-4fa4-a73c-40a80661a49a)
 
 ## Build & Use
 ```bash
