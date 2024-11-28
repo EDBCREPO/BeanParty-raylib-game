@@ -20,7 +20,7 @@ namespace rl { namespace game {
             float   speed =  3.0f;
             Vector2 dir   = { 0.0f, -1.2f };
             ptr_t<Camera3D> cam = new Camera3D();
-            Texture img = LoadTexture( "assets/images/pointer.png" );
+            Texture img = GetAttr("Texture").as<array_t<Texture>>()[1];
         };  ptr_t<NODE> obj = new NODE(); DisableCursor();
     
     /*─······································································─*/
@@ -85,9 +85,7 @@ namespace rl { namespace game {
             DrawTextureEx( obj->img, GetMousePosition()-Vector2({ 18, 18 }), 0, 1, WHITE );
         });
 
-        self->onRemove([=](){ 
-            if( IsTextureReady( obj->img ) ){ UnloadTexture( obj->img ); }
-        });
+      //self->onRemove([=](){ });
 
     }
 

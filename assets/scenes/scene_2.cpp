@@ -20,6 +20,7 @@ namespace rl { namespace scene {
 
         self->on3DDraw([](){
             ClearBackground({ 0, 49, 97, 255 });
+            DrawText( GetAttr("Mode").as<string_t>().get(), 10, 10, 13, RED );
         });
 
     }

@@ -8,31 +8,19 @@ namespace rl { namespace game {
     void impostor( ptr_t<Item> self ) {
 
         struct NODE { 
-            Texture img = LoadTexture( "./assets/images/pointer.png" );
+            Texture img = GetAttr("Texture").as<array_t<Texture>>()[1];
             Vector3 pos = { 3, 3, 3 }; float angle = 0;
             Vector3 dir = { 3, 3, 3 }; ulong model = 0;
             Vector2 mos = { 0, -1.2 };
-            array_t<Model> list;
             ptr_t<Camera3D> cam = new Camera3D();
         };  ptr_t<NODE> obj = new NODE();
-    
-    /*─······································································─*/
-
-        obj->list.push( LoadModel( "./assets/models/characters/player8.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player7.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player6.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player5.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player4.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player3.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player2.obj" ) );
-        obj->list.push( LoadModel( "./assets/models/characters/player1.obj" ) );
     
     /*─······································································─*/
 
         GlobalCam3D = obj->cam; memset( &obj->cam, 0, sizeof(*obj->cam) );
         obj->cam->up         = Vector3({ 0, 1, 0 });
         obj->cam->projection = CAMERA_PERSPECTIVE;
-        obj->model           = rand() % 8;
+        obj->model           = rand_range( 1, 8 );
         obj->cam->fovy       = 75.0f;
 
         SetAttr( "Mode", "IMPOSTOR" );
@@ -77,20 +65,25 @@ namespace rl { namespace game {
         });
 
         self->onLoop([=]( float delta ){ [=](){
-        coStart; coDelay(80); auto mos = GetMousePosition();
-            websocket::send( json::stringify( object_t({
-                { "pos", array_t<float>({ obj->pos.x, obj->pos.y, obj->pos.z }) },
+            static string_t prev, msg;
+        coStart; coDelay(100); auto mos = GetMousePosition();
+
+            msg = json::stringify( object_t({
+                { "mos", array_t<float>({ obj->cam->position.x, obj->cam->position.y, obj->cam->position.z }) },
                 { "ang", obj->angle }, { "mdl", obj->model }, { "type", 1u },
-                { "mos", array_t<float>({ mos.x, mos.y }) }
-            }) ));
+                { "pos", array_t<float>({ obj->pos.x, obj->pos.z }) }
+            }) );
+
+            if( msg != prev ){ websocket::send( msg ); prev = msg; }
+
         coStop
         }(); });
-    
+
     /*─······································································─*/
 
         self->on3DDraw([=](){
             DrawModelEx( 
-                obj->list[obj->model], 
+                GetAttr("Model").as<array_t<Model>>()[obj->model],
                 obj->pos,   { 0, 1, 0 }, 
                 obj->angle, { 1, 1, 1 }, WHITE
             );
@@ -104,11 +97,7 @@ namespace rl { namespace game {
     
     /*─······································································─*/
 
-        self->onRemove([=](){
-            forEach( x, obj->list )
-            if( IsModelReady( x ) ){ UnloadModel( x ); }
-            if( IsTextureReady( obj->img )  ){ UnloadTexture( obj->img );   }
-        });
+      //self->onRemove([=](){ });
 
     }
 

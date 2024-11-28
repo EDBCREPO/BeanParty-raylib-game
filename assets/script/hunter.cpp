@@ -1,5 +1,6 @@
 #pragma once
 #include "../network/client.cpp"
+#include "../shaders/hunter.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -8,11 +9,12 @@ namespace rl { namespace game {
     void hunter( ptr_t<Item> self ) {
 
         struct NODE {
-            float distance= 20.0f;
+            float distance= 15.0f;
             float   speed = 10.0f;
             Vector2 dir   = { 0.0f, -1.2f };
+            Shader shader = shader::hunter();
             ptr_t<Camera3D> cam = new Camera3D();
-            Texture img = LoadTexture( "assets/images/target.png" );
+            Texture img = GetAttr("Texture").as<array_t<Texture>>()[0];
         };  ptr_t<NODE> obj = new NODE();
     
     /*─······································································─*/
@@ -43,17 +45,18 @@ namespace rl { namespace game {
         });
 
         self->onLoop([=]( float delta ){ [=](){
-        coStart; coDelay(80); auto mos = GetMousePosition();
-            websocket::send( json::stringify( object_t({
+            static string_t prev, msg;
+        coStart; coDelay(100); auto mos = GetMousePosition();
+
+            msg = json::stringify( object_t({
+                { "pos", array_t<float>({ obj->cam->position.x, obj->cam->position.y, obj->cam->position.z }) },
                 { "ang", array_t<float>({ obj->dir.x, obj->dir.y }) },
                 { "mos", array_t<float>({ mos.x, mos.y }) },
                 { "mdl", 1u }, { "type", 0u },
-                { "pos", array_t<float>({
-                    obj->cam->position.x,
-                    obj->cam->position.y,
-                    obj->cam->position.z 
-                }) }
-            }) ));
+            }) );
+
+            if( msg != prev ){ websocket::send( msg ); prev = msg; }
+            
         coStop
         }(); });
     
@@ -61,12 +64,16 @@ namespace rl { namespace game {
 
         self->onDraw([=](){ 
             DrawTextureEx( obj->img, GetMousePosition()-Vector2({ 18, 18 }), 0, 1, WHITE );
+            BeginShaderMode( obj->shader ); Vector3 mos = { GetMouseX()*1.0f, GetMouseY()*1.0f, GetRenderHeight()*1.0f };
+            SetShaderValue( obj->shader, GetShaderLocation( obj->shader, "mos" ), &mos, SHADER_UNIFORM_VEC3 );
+            DrawRectangle( 0, 0, GetRenderWidth(), GetRenderHeight(), BLACK );
+            EndShaderMode();
         });
     
     /*─······································································─*/
 
         self->onRemove([=](){ 
-            if( IsTextureReady( obj->img ) ){ UnloadTexture( obj->img ); }
+            if( IsShaderReady( obj->shader ) ){ UnloadShader( obj->shader ); }
         });
 
     }

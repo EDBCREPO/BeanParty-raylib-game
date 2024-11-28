@@ -9,10 +9,9 @@ namespace rl {
     void http_handler( http_t cli ) { 
 
         string_t dir = "www/index.html";
+        
         if( cli.path.size() > 1 )
             dir = path::join( "www", cli.path );
-
-        console::log( cli.path, cli.get_fd() );
 
         if( !fs::exists_file(dir) ){
             cli.write_header( 404, header_t({ 

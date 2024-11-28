@@ -1,4 +1,5 @@
 #pragma once
+#include "../network/client.cpp"
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
@@ -16,20 +17,8 @@ namespace rl { namespace game {
         };
 
         struct NODE {
-            queue_t<item>  list;
-            array_t<Model> model;
-        };  ptr_t<NODE> obj = new NODE();
-    
-    /*─······································································─*/
-
-        obj->model.push( LoadModel( "./assets/models/characters/player8.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player7.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player6.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player5.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player4.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player3.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player2.obj" ) );
-        obj->model.push( LoadModel( "./assets/models/characters/player1.obj" ) );
+            queue_t<item> list, player;
+        };  ptr_t<NODE>   obj = new NODE();
     
     /*─······································································─*/
 
@@ -37,8 +26,8 @@ namespace rl { namespace game {
             item data; memset( &data, 0, sizeof(item) );
                  data.pos   = Vector3({ rand_range(0,15)-7.0f, 0, rand_range(0,15)-7.0f });
                  data.tar   = Vector3({ rand_range(0,15)-7.0f, 0, rand_range(0,15)-7.0f });
+                 data.model = &GetAttr("Model").as<array_t<Model>>()[ rand_range(1,8) ];
                  data.state = true; // rand_range( 0, 2 )==0;
-                 data.model = &obj->model[ rand()%8 ];
                  data.angle = rand_range( 0, 360 );
                  data.salt  = rand_range( 0, 2 )-1;
             obj->list.push( data );
@@ -94,6 +83,13 @@ namespace rl { namespace game {
     
     /*─······································································─*/
 
+        auto ids = websocket::onSend([=]( string_t message ){
+            auto data = json::parse( message );
+          //console::log( message );
+        });
+    
+    /*─······································································─*/
+
         self->on3DDraw([=](){
             auto x = obj->list.first(); while( x!=nullptr ){
               //DrawCube( x->data.tar, 1, 1, 1, RED );
@@ -106,10 +102,7 @@ namespace rl { namespace game {
     
     /*─······································································─*/
 
-        self->onRemove([=](){
-            forEach( x, obj->model )
-            if( IsModelReady( x ) ){ UnloadModel( x ); }
-        });
+        self->onRemove([=](){ process::clear( ids ); });
 
     }
 

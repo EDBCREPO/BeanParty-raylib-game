@@ -3,7 +3,7 @@
 
 namespace rl { namespace websocket {
 
-    tcp_t             client; 
+    ws_t              client; 
     event_t<string_t> onSend;
     event_t<except_t> onError;
     event_t<ws_t>     onConnect;
@@ -13,7 +13,7 @@ namespace rl { namespace websocket {
     void send( string_t message ){ onSend.emit( message ); }
 
     void connect( string_t url ){ try {
-        client.close(); client = ws::client( url );
+        client.close(); client = ws::connect( url );
         client.onConnect.once([=]( ws_t cli ){ onConnect.emit( cli );
             cli.onData([=]( string_t msg ){ onMessage.emit( msg ); });
             auto ids = onSend([=]( string_t msg ){ cli.write( msg ); });

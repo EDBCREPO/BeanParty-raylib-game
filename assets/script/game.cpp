@@ -8,6 +8,7 @@
  */
 
 #pragma once
+#define _SHADER_(...)(string_t("#version 100\n")+_STRING_(__VA_ARGS__)).get()
 //      RAYGUI_IMPLEMENTATION
 
 /*────────────────────────────────────────────────────────────────────────────*/
@@ -22,6 +23,8 @@
 
 namespace rl {
     #include <raylib/raylib.h>
+    /*---------------------*/
+    #include <raylib/raygl.h>
     #include <raylib/raygui.h>
     #include <raylib/raymath.h>
 }
@@ -42,12 +45,13 @@ namespace rl {
     event_t<>       onInit;
     event_t<>       onDraw;
     event_t<float>  onLoop;
+    event_t<>       onNext;
     
     /*─······································································─*/
 
     void SetAttr( string_t name, object_t value ){ Global[name] = value; }
 
-    void RemoveAttr( string_t name ){ SetAttr( name, nullptr ); }
+    void RemoveAttr( string_t name ){ Global.erase( name ); }
     
     object_t GetAttr( string_t name ){ return Global[name]; }
 
@@ -63,17 +67,47 @@ namespace rl {
         process::exit(1);
     }
 
+    void BeginMode3D( Camera3D& cam, float near, float far ){
+        rlDrawRenderBatchActive();        // Update and draw internal render batch
+        rlMatrixMode(RL_PROJECTION);      // Switch to projection matrix
+        rlPushMatrix(); rlLoadIdentity(); // Reset current matrix (projection)
+
+        float aspect = GetRenderWidth() * 1.016f / GetRenderHeight();
+
+        if ( cam.projection == CAMERA_PERSPECTIVE ) {
+
+            double top   = near * tan(cam.fovy * 0.5 * DEG2RAD);
+            double right = top  * aspect;
+            rlFrustum(-right, right, -top, top, near, far);
+
+        } else {
+
+            double top = cam.fovy / 2.0;
+            double right = top * aspect;
+            rlOrtho(-right, right, -top, top, near, far);
+
+        }
+
+        rlMatrixMode(RL_MODELVIEW);     // Switch back to modelview matrix
+        rlLoadIdentity();               // Reset current matrix (modelview)
+
+        Matrix matView = MatrixLookAt(cam.position, cam.target, cam.up);
+        rlMultMatrixf(MatrixToFloat(matView));
+
+        rlEnableDepthTest(); // Enable DEPTH_TEST for 3D
+    }
+
     void Init( int width, int height, uint fps, string_t title ) {
+        InitWindow( width, height, title.get() ); SetTargetFPS( fps ); 
         process::onSIGEXIT([](){ Close(); }); process::add([=](){
         coStart
-            InitWindow( width, height, title.get() ); SetTargetFPS( fps ); coNext;
-            while( !IsWindowReady() || Waiting!=0 ){ coNext; } onInit.emit(); 
-            while( !WindowShouldClose() ){
+            onInit.emit(); while( !WindowShouldClose() ){
+            while( !IsWindowReady() || Waiting!=0 ){ coNext; } 
                 onLoop.emit( GetFrameTime() );  BeginDrawing(); 
-                    if( GlobalCam3D!=nullptr ){ BeginMode3D( *GlobalCam3D ); on3DDraw.emit(); EndMode3D(); }
-                    if( GlobalCam2D!=nullptr ){ BeginMode2D( *GlobalCam2D ); on2DDraw.emit(); EndMode2D(); }
+                    if( GlobalCam3D!=nullptr ){ BeginMode3D( *GlobalCam3D, 0.4f, 1000.0f ); on3DDraw.emit(); EndMode3D(); }
+                    if( GlobalCam2D!=nullptr ){ BeginMode2D( *GlobalCam2D );                on2DDraw.emit(); EndMode2D(); }
                     if( !onDraw.empty() )     { onDraw.emit(); }
-                EndDrawing(); coNext;
+                EndDrawing(); coNext; onNext.emit();
             }   Close();
         coStop
         });
@@ -107,23 +141,23 @@ public:
         array_t<void*> id; Waiting++;
 
         id.push( rl::onLoop([=]( float delta ){ 
-            if( WindowShouldClose() || !self->exists() )
-              { self->free(); return; } self->onLoop.emit( delta );
+            if( !self->exists() ){ self->free(); return; } 
+                self->onLoop.emit( delta );
         }) );
 
         id.push( rl::onDraw([=](){ 
-            if( WindowShouldClose() || !self->exists() )
-              { return; } self->onDraw.emit(); 
+            if( !self->exists() ){ return; } 
+                self->onDraw.emit(); 
         }) );
 
         id.push( rl::on3DDraw([=](){ 
-            if( WindowShouldClose() || !self->exists() )
-              { return; } self->on3DDraw.emit(); 
+            if( !self->exists() ){ return; } 
+                self->on3DDraw.emit(); 
         }) );
 
         id.push( rl::on2DDraw([=](){ 
-            if( WindowShouldClose() || !self->exists() )
-              { return; } self->on2DDraw.emit(); 
+            if( !self->exists() ){ return; } 
+                self->on2DDraw.emit(); 
         }) );
 
         auto idr = self->onRemove.once([=](){
@@ -147,7 +181,7 @@ public:
     }
 
     void RemoveAttr( string_t name ) const noexcept { 
-        SetAttr( name, nullptr ); 
+        obj->attr.erase( name );
     }
     
     object_t GetAttr( string_t name ) const noexcept { 
@@ -201,23 +235,23 @@ public:
         array_t<void*> id; Waiting++;
 
         id.push( rl::onLoop([=]( float delta ){ 
-            if( WindowShouldClose() || !self->exists() )
-              { self->free(); return; } self->onLoop.emit( delta );
+            if( !self->exists() ){ self->free(); return; } 
+                self->onLoop.emit( delta );
         }) );
 
         id.push( rl::onDraw([=](){ 
-            if( WindowShouldClose() || !self->exists() )
-              { return; } self->onDraw.emit(); 
+            if( !self->exists() ){ return; } 
+                self->onDraw.emit(); 
         }) );
 
         id.push( rl::on3DDraw([=](){ 
-            if( WindowShouldClose() || !self->exists() )
-              { return; } self->on3DDraw.emit(); 
+            if( !self->exists() ){ return; } 
+                self->on3DDraw.emit(); 
         }) );
 
         id.push( rl::on2DDraw([=](){ 
-            if( WindowShouldClose() || !self->exists() )
-              { return; } self->on2DDraw.emit(); 
+            if( !self->exists() ){ return; } 
+                self->on2DDraw.emit(); 
         }) );
 
         auto idr = self->onRemove.once([=](){
@@ -245,7 +279,7 @@ public:
     }
 
     void RemoveAttr( string_t name ) const noexcept { 
-        SetAttr( name, nullptr ); 
+        obj->attr.erase( name ); 
     }
 
     bool HasAttr( string_t name ) const noexcept {
@@ -253,7 +287,7 @@ public:
     }
     
     object_t GetAttr() const noexcept { 
-        return obj->attr; 
+        return obj->attr;
     }
     
     /*─······································································─*/
@@ -261,7 +295,7 @@ public:
     template< class T, class... V >
     Item& AppendItem( string_t name, T cb, V... args ) const noexcept {
         auto item = Item( cb, args... ); if( name == nullptr )
-        { name.resize(sizeof(item)); memcpy( name.get(), &item, sizeof(item) ); }
+        { name.resize(sizeof(item)); memcpy( name.get(), (void*)&item, sizeof(item) ); }
           obj->items[name] = item; return obj->items[name];
     }
 
@@ -294,7 +328,7 @@ public:
 
     void close() const noexcept {
         if( !exists() ){ return; } obj->state = 0; 
-        onRemove.emit(); RemoveItem();
+            onRemove.emit(); RemoveItem();
     }
 
 };}
